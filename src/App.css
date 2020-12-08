@@ -1,4 +1,5 @@
 .App {
+  margin-top: 15px;
   text-align: center;
 }
 
@@ -28,6 +29,10 @@
   color: #61dafb;
 }
 
+.App .navbar-brand {
+  font-weight: bold;
+}
+
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);
@@ -35,4 +40,12 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.Card {
+  margin-top: 15px;
+}
+
+.Img {
+  margin-top: 15px;
 }

@@ -44,8 +44,29 @@
 
 .Card {
   margin-top: 15px;
+  margin-bottom: 15px;
+  padding-left: 15%;
+  padding-right: 15%;
+}
+
+.CardButton{
+  margin-top: 15px;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 3px 10px 0 rgba(0, 0, 0, 0.19);
+  margin-bottom: 15px;
+  height: 48px;
+  line-height: 48px;
+  text-align: center;
 }
 
 .Img {
+}
+
+.NavBar {
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 3px 10px 0 rgba(0, 0, 0, 0.19);
+  background-color: #B03A2E;
+}
+
+.Button {
   margin-top: 15px;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 3px 10px 0 rgba(0, 0, 0, 0.19);
 }

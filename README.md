@@ -1,3 +1,5 @@
+* This PWA is currently under development ...
+
 ### 0) Compile and execute code locally
     yarn start
 
@@ -11,7 +13,9 @@
  
     Heart sound detected, start to record heart sound for x seconds (stage 2)
  
-    x-second heart sound recorded, report generated (stage 3)
+    X-second heart sound recorded, report generated (stage 3)
+    
+    * you can press the image to trigger the switch from current stage to the next stage (Just for testing).
 
 ### 3) Todo list
     3.1) Complete the PWA, including the UI construction & the signals preprocessing part.

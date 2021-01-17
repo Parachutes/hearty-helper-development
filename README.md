@@ -23,6 +23,7 @@
     3.2) Convert two tensorflow models to tfjs models.
 
     3.3) Integrate tfjs models into PWA.
+        * NO MODEL IS INTEGRATED INTO THE APP NOW!
     
     3.4) Test and depolyment.
 

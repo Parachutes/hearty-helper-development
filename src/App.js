@@ -3,8 +3,21 @@ import './App.css';
 import {Card, Container, Image, Navbar} from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import AudioAnalyser from './AudioAnalyser';
+// import Recorder from 'recorder-js';
 
-// import * as tf from '@tensorflow/tfjs';
+// const audioContext =  new (window.AudioContext || window.webkitAudioContext)();
+// const recorder = new Recorder(audioContext, {
+//     // An array of 255 Numbers
+//     // You can use this to visualize the audio stream
+//     // If you use react, check out react-wave-stream
+//     onAnalysed: data => console.log(data),
+// });
+// let isRecording = false;
+// let blob = null;
+//
+// navigator.mediaDevices.getUserMedia({audio: true})
+//     .then(stream => recorder.init(stream))
+//     .catch(err => console.log('Uh oh... unable to get stream...', err));
 
 
 class App extends React.Component {
@@ -18,36 +31,25 @@ class App extends React.Component {
             information: 'Please press the heart below, I can feel your heart.',
             audio: null
         };
-        // navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
     }
 
-    async getMicrophone() {
 
+
+    async getMicrophone() {
         try {
             this.audioData = await navigator.mediaDevices.getUserMedia({
                 audio: true,
                 video: false
             });
-            // this.setState({ audio });
-
-            // this.mic = await tf.data.microphone({
-            //     fftSize: 1024,
-            //     columnTruncateLength: 232,
-            //     numFramesPerSpectrogram: 43,
-            //     sampleRateHz:44100,
-            //     includeSpectrogram: true,
-            //     includeWaveform: true
-            // });
-            // this.audioData = await this.mic.capture();
-
-
+            this.setState({audio: this.audioData});
         } catch (e) {
             console.log(e)
         }
     }
 
-    async startMicrophone() {
-        this.setState({audio: this.audioData});
+    async startRecord() {
+        // TODO start to record
+        console.log('start to record');
     }
 
     async stopMicrophone() {
@@ -57,55 +59,41 @@ class App extends React.Component {
     }
 
 
-    // stopMicrophone() {
-    //     this.state.audio.getTracks().forEach(track => track.stop());
-    //     this.setState({ audio: null });
-    // }
-
 
     render() {
 
-
         const startRecord = () => {
-            if (this.state.heartState === 0) {
-                this.getMicrophone().then(r =>
-                    this.setState({
-                        heartState: 1,
-                        information: 'Please put the microphone near to your heart.'
-                    })
-                )
-            }
-            restart()
+            this.getMicrophone().then(r =>
+                this.setState({
+                    heartState: 1,
+                    information: 'Please put the microphone near to your heart.'
+                })
+            )
         }
 
         const heartBeatDetected = () => {
-            if (this.state.heartState === 1) {
-                this.startMicrophone().then(r =>
-                    this.setState({
-                        heartState: 2,
-                        information: 'Heart sound detected! Please hold the phone for 9 seconds.'
-                    })
-                )
-            }
+            this.startRecord().then(r =>
+                this.setState({
+                    heartState: 2,
+                    information: 'Heart sound detected! Please hold the phone for 9 seconds.'
+                })
+            )
+
         }
 
         const recordingFinished = () => {
-            if (this.state.heartState === 2) {
-                this.stopMicrophone().then(r => this.setState({
-                        heartState: 3,
-                        information: 'Done!'
-                    })
-                )
-            }
+            this.stopMicrophone().then(r => this.setState({
+                    heartState: 3,
+                    information: 'Done!'
+                })
+            )
         }
 
         const restart = () => {
-            if (this.state.heartState === 3) {
-                this.setState({
-                    heartState: 0,
-                    information: 'Please press the heart below, I can feel your heart.'
-                })
-            }
+            this.setState({
+                heartState: 0,
+                information: 'Please press the heart below, I can feel your heart.'
+            })
         }
 
 
@@ -122,8 +110,10 @@ class App extends React.Component {
 
 
         let startButton;
-        if ( this.state.heartState === 0 || this.state.heartState === 3 ) {
+        if ( this.state.heartState === 0 ) {
             startButton = <Card className="CardButton" onClick={() => startRecord()}>START</Card>;
+        } else if (this.state.heartState === 3 ) {
+            startButton = <Card className="CardButton" onClick={() => restart()}>TRY AGAIN</Card>;
         } else if ( (this.state.heartState === 1 || this.state.heartState === 2 ) && this.state.audio ) {
             startButton =
                 <Card className="Card">
@@ -132,7 +122,6 @@ class App extends React.Component {
                     </Card.Body>
                 </Card>;
         }
-
 
 
         return (

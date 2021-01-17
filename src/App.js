@@ -3,7 +3,7 @@ import './App.css';
 import {Card, Container, Image, Navbar} from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import AudioAnalyser from './AudioAnalyser';
-// import Recorder from 'recorder-js';
+import Recorder from 'recorder-js';
 
 // const audioContext =  new (window.AudioContext || window.webkitAudioContext)();
 // const recorder = new Recorder(audioContext, {
@@ -12,25 +12,57 @@ import AudioAnalyser from './AudioAnalyser';
 //     // If you use react, check out react-wave-stream
 //     onAnalysed: data => console.log(data),
 // });
+//
 // let isRecording = false;
 // let blob = null;
-//
-// navigator.mediaDevices.getUserMedia({audio: true})
-//     .then(stream => recorder.init(stream))
-//     .catch(err => console.log('Uh oh... unable to get stream...', err));
+
 
 
 class App extends React.Component {
 
     constructor(props) {
         super(props);
-        this.mic = null;
         this.audioData = null;
         this.state = {
             heartState: 0,
             information: 'Please press the heart below, I can feel your heart.',
             audio: null
         };
+        this.startRecording = this.startRecording.bind(this);
+        this.stopRecording = this.stopRecording.bind(this);
+        this.blob = null;
+    }
+
+    componentDidMount() {
+        const audioContext =  new (window.AudioContext || window.webkitAudioContext)();
+        this.recorder = new Recorder(audioContext, {
+            numChannels:1
+        });
+        navigator.mediaDevices.getUserMedia({audio: true})
+            .then(stream => this.recorder.init(stream))
+            .catch(err => console.log('Uh oh... unable to get stream...', err));
+        document.addEventListener('mousedown', () => audioContext.resume());
+    }
+
+    startRecording() {
+        this.recorder.start()
+    }
+
+    stopRecording() {
+        this.recorder.stop()
+            .then(({blob, buffer}) => {
+                // let tmp_blob = blob;
+                // var fd = new FormData();
+                // fd.append('audio', tmp_blob);
+
+                this.blob = blob;
+                console.log(this.blob);
+
+            })
+    }
+
+    download() {
+        Recorder.download(this.blob, 'my-audio-file'); // downloads a .wav file
     }
 
 
@@ -50,12 +82,14 @@ class App extends React.Component {
     async startRecord() {
         // TODO start to record
         console.log('start to record');
+        this.startRecording();
     }
 
     async stopMicrophone() {
         this.state.audio.getTracks().forEach(track => track.stop());
         console.log(this.state.audio);
         this.setState({ audio: null });
+        this.stopRecording();
     }
 
 
@@ -123,6 +157,13 @@ class App extends React.Component {
                 </Card>;
         }
 
+        let helpButton;
+        if (this.state.heartState === 3) {
+            helpButton = <Card className="CardButton" onClick={() => this.download()}>Download wav</Card>;
+        } else  {
+            helpButton = <Card className="CardButton">HELP</Card>;
+        }
+
 
         return (
             <div className="App">
@@ -153,7 +194,7 @@ class App extends React.Component {
 
                     {startButton}
 
-                    <Card className="CardButton">HELP</Card>
+                    {helpButton}
 
                 </Container>
             </div>

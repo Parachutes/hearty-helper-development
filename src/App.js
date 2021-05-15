@@ -69,11 +69,13 @@ class App extends React.Component {
             .then(({blob, buffer}) => {
                 // TODO here could be a problem, something wired happened when binary buffer turns to the array
                 const downSampledArray = this.downSample(tf.buffer([buffer[0].length], 'float32', buffer[0]).toTensor().arraySync(), 1000);
+                // this.heartDetectArray = this.maxMinNorm(this.cropAndPad(downSampledArray));
                 this.heartDetectArray = this.cropAndPad(downSampledArray);
                 this.hsSTFT = this.signal2stft(this.heartDetectArray);
                 this.prediction = this.doPrediction(this.hsSTFT);
-                if (this.prediction.arraySync()[0] > 0.9) {
-                    if (this.flag >= 2) {
+
+                if (this.prediction.arraySync()[0] > 0.5) {
+                    if (this.flag >= 1) {
                         this.startRecording();
                     } else {
                         this.flag = this.flag + 1;
@@ -81,6 +83,7 @@ class App extends React.Component {
                 } else {
                     this.flag = 0;
                 }
+
                 console.log('1-sec signal recorded, processed and predicted.', this.prediction.arraySync()[0]);
             }).then(await this.recorder.start())
     }
@@ -97,15 +100,21 @@ class App extends React.Component {
         return result
     }
 
+    maxMinNorm(array) {
+        const array_std = (array - Math.min(array)) / (Math.max(array) - Math.min(array));
+        const array_scaled = array_std * 2 - 1;
+        return array_scaled
+    }
+
     cropAndPad(array) {
         if (array.length === 1000) {
             return array
         } else if (array.length < 1000) {
-            var newArray = [];
-            for (var i = 0; i < array.length; i++) {
+            let newArray = [];
+            for (let i = 0; i < array.length; i++) {
                 newArray.push(array[i]);
             }
-            for (var j = array.length; j < 1000; j++) {
+            for (let j = array.length; j < 1000; j++) {
                 newArray.push(0);
             }
             return new Float32Array(newArray)
@@ -116,22 +125,28 @@ class App extends React.Component {
 
     // The signal2stft works fine
     signal2stft(array) {
+
         const input = tf.tensor1d(array);
-        const stftTensor = tf.signal.stft(input, 256, 128);
+        const stftTensor = tf.signal.stft(input, 200, 100, 200);
+        const result = tf.transpose(tf.abs(stftTensor))
+        console.log(result)
+        return result
+        // return stftTensor.reshape([101, 9])
 
-        const stftArray = stftTensor.dataSync();
-        let conjResult = [];
-        let cache = 0;
-        for (let i = 0; i < stftArray.length; i++) {
-            if (i % 2 === 0) {
-                cache = (stftArray[i] * stftArray[i])
-            } else {
-                conjResult.push(cache + (stftArray[i] * stftArray[i]))
-            }
-        };
-        const conjTensor = tf.tensor(conjResult).reshape([6, 129]);
-
-        return tf.transpose(tf.abs(conjTensor))
+        // const input = tf.tensor1d(array);
+        // const stftTensor = tf.signal.stft(input, 256, 128);
+        // const stftArray = stftTensor.dataSync();
+        // let conjResult = [];
+        // let cache = 0;
+        // for (let i = 0; i < stftArray.length; i++) {
+        //     if (i % 2 === 0) {
+        //         cache = (stftArray[i] * stftArray[i])
+        //     } else {
+        //         conjResult.push(cache + (stftArray[i] * stftArray[i]))
+        //     }
+        // };
+        // const conjTensor = tf.tensor(conjResult).reshape([6, 129]);
+        // return tf.transpose(tf.abs(conjTensor))
     }
 
     doPrediction(tensor) {
@@ -159,7 +174,7 @@ class App extends React.Component {
         return array.reduce(function(a, b){ return a+b; })/array.length;
     }
     calculateStDeviation(array){
-        var mean= this.calculateMean(array),
+        let mean= this.calculateMean(array),
             dev= array.map(function(itm){return (itm-mean)*(itm-mean); });
         return Math.sqrt(dev.reduce(function(a, b){ return a+b; })/array.length);
     }

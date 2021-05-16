@@ -15,8 +15,9 @@ class App extends React.Component {
         this.audioData = null;
         this.state = {
             heartState: 0,
-            information: 'stage 0',
-            audio: null
+            information: 'Press button to start',
+            audio: null,
+            startButtonText: 'Visualization of Heart Sound'
         };
         this.timer = null;
         this.startRecording = this.startRecording.bind(this);
@@ -27,7 +28,15 @@ class App extends React.Component {
         this.model = null;
         this.prediction = null;
         this.gumStream = null;
-        this.flag = 0;
+
+        // if numOfHeartSound > 1, switch to Stage 2, and set numOfNoise to 0
+        // if numOfNoise > 1, switch to Stage 1, and set numOfHeartSound to 0
+        // if captureTimer > 9, switch to Stage 3, and set numOfNoise and numOfHeartSound to 0
+        // As long as in the Stage 2, captureTimer + 1 per second
+
+        this.numOfHeartSound = 0;
+        this.numOfNoise = 0;
+        this.captureTimer = 0;
     }
 
     async componentDidMount() {
@@ -35,9 +44,11 @@ class App extends React.Component {
         this.model = await tf.loadLayersModel(MODEL_PATH);
     }
 
+    // This function initialise recorder for heart sound recognition
     async initMic() {
         console.log('init the mic, keep listening to detect heart sound || Stage 0 => 1');
         this.audioContext =  new (window.AudioContext || window.webkitAudioContext)();
+        // This recorder is for heart sound recognition
         this.recorder = new Recorder(this.audioContext, {
             numChannels:1
         });
@@ -50,13 +61,15 @@ class App extends React.Component {
                 }
             )
             .catch(err => console.log('Uh oh... unable to get stream...', err))
+
         await this.startListening().then(
             this.timer = setInterval( () =>
                 this.pauseAndStartListening(), 1000 )
         )
+
         this.setState({
             heartState: 1,
-            information: 'Start to listening ...'
+            information: 'Searching for heart sound ...'
         });
     }
 
@@ -67,24 +80,47 @@ class App extends React.Component {
     async pauseAndStartListening() {
         await this.recorder.stop()
             .then(({blob, buffer}) => {
-                // TODO here could be a problem, something wired happened when binary buffer turns to the array
                 const downSampledArray = this.downSample(tf.buffer([buffer[0].length], 'float32', buffer[0]).toTensor().arraySync(), 1000);
-                // this.heartDetectArray = this.maxMinNorm(this.cropAndPad(downSampledArray));
                 this.heartDetectArray = this.cropAndPad(downSampledArray);
                 this.hsSTFT = this.signal2stft(this.heartDetectArray);
                 this.prediction = this.doPrediction(this.hsSTFT);
 
+                if (this.captureTimer > 10) {
+                    this.stopRecording();
+                }
+
+                if (this.state.heartState === 2) {
+                    this.setState({
+                        information: 'Hold for ' + (10 - this.captureTimer) + ' seconds'
+                    });
+                    this.captureTimer = this.captureTimer + 1;
+                }
+
                 if (this.prediction.arraySync()[0] > 0.5) {
-                    if (this.flag >= 1) {
+                    this.numOfNoise = 0;
+                    if (this.numOfHeartSound >= 1) {
                         this.startRecording();
                     } else {
-                        this.flag = this.flag + 1;
+                        this.numOfHeartSound = this.numOfHeartSound + 1;
                     }
                 } else {
-                    this.flag = 0;
+                    this.numOfHeartSound = 0;
+                    if (this.numOfNoise >= 2) {
+                        this.captureTimer = 0;
+                        this.setState({
+                            heartState: 1,
+                            information: 'Searching for heart sound ...'
+                        });
+                    } else {
+                        this.numOfNoise = this.numOfNoise + 1;
+                    }
                 }
 
                 console.log('1-sec signal recorded, processed and predicted.', this.prediction.arraySync()[0]);
+                this.setState({
+                    startButtonText: this.prediction.arraySync()[0]
+                })
+
             }).then(await this.recorder.start())
     }
 
@@ -98,12 +134,6 @@ class App extends React.Component {
             }
         }
         return result
-    }
-
-    maxMinNorm(array) {
-        const array_std = (array - Math.min(array)) / (Math.max(array) - Math.min(array));
-        const array_scaled = array_std * 2 - 1;
-        return array_scaled
     }
 
     cropAndPad(array) {
@@ -123,30 +153,12 @@ class App extends React.Component {
         }
     }
 
-    // The signal2stft works fine
     signal2stft(array) {
-
         const input = tf.tensor1d(array);
         const stftTensor = tf.signal.stft(input, 200, 100, 200);
         const result = tf.transpose(tf.abs(stftTensor))
-        console.log(result)
         return result
-        // return stftTensor.reshape([101, 9])
 
-        // const input = tf.tensor1d(array);
-        // const stftTensor = tf.signal.stft(input, 256, 128);
-        // const stftArray = stftTensor.dataSync();
-        // let conjResult = [];
-        // let cache = 0;
-        // for (let i = 0; i < stftArray.length; i++) {
-        //     if (i % 2 === 0) {
-        //         cache = (stftArray[i] * stftArray[i])
-        //     } else {
-        //         conjResult.push(cache + (stftArray[i] * stftArray[i]))
-        //     }
-        // };
-        // const conjTensor = tf.tensor(conjResult).reshape([6, 129]);
-        // return tf.transpose(tf.abs(conjTensor))
     }
 
     doPrediction(tensor) {
@@ -157,7 +169,6 @@ class App extends React.Component {
         return output
     }
 
-    // The Standardization works fine <=
     doStandardization(tensor) {
         const matrix = tensor.transpose().arraySync();
         let newMatrix = [];
@@ -180,22 +191,34 @@ class App extends React.Component {
     }
 
     async startRecording() {
+        // TODO initialise another recorder
         console.log('start recording, to get heart sound data || Stage 1 => 2');
         this.setState({
             heartState: 2,
-            information: 'Heart sound detected.'
+            startButtonText: 'Visualization of Heart Sound'
         });
-        await this.recorder.stop();
-        this.gumStream.getAudioTracks()[0].stop();
-        clearInterval(this.timer);
-        this.flag = 0;
+        // await this.recorder.stop();
+        // this.gumStream.getAudioTracks()[0].stop();
+        // clearInterval(this.timer);
+        // this.flag = 0;
+
+        // this.flagHeartSound = 0;
+        this.numOfNoise = 0;
     }
 
     async stopRecording() {
+
+        await this.recorder.stop();
+        this.gumStream.getAudioTracks()[0].stop();
+        clearInterval(this.timer);
+        this.numOfHeartSound = 0;
+        this.numOfNoise = 0;
+        this.captureTimer = 0;
+
         console.log('stop recording, feed the recorded data to the model || Stage 2 => 3');
         this.setState({
             heartState: 3,
-            information: 'Heart sound analysed.'
+            information: 'Heart sound is captured and being analysed.'
         });
         // TODO feed the tensor to the trained model
     }
@@ -204,7 +227,7 @@ class App extends React.Component {
         console.log('restart the workflow || Stage 3 => 0');
         this.setState({
             heartState: 0,
-            information: 'stage 0'
+            information: 'Press button to start'
         })
     }
 
@@ -230,7 +253,7 @@ class App extends React.Component {
             startButton =
                 <Card className="Card">
                     <Card.Body>
-                        Visualize the heart beat
+                        {this.state.startButtonText}
                     </Card.Body>
                 </Card>;
         }

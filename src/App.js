@@ -105,7 +105,7 @@ class App extends React.Component {
                     }
                 } else {
                     this.numOfHeartSound = 0;
-                    if (this.numOfNoise >= 2) {
+                    if (this.numOfNoise >= 1) {
                         this.captureTimer = 0;
                         this.setState({
                             heartState: 1,

@@ -118,7 +118,7 @@ class App extends React.Component {
 
                 console.log('1-sec signal recorded, processed and predicted.', this.prediction.arraySync()[0]);
                 this.setState({
-                    startButtonText: this.prediction.arraySync()[0]
+                    startButtonText: 'Output of network: ' + Math.round(this.prediction.arraySync()[0] * 100) / 100
                 })
 
             }).then(await this.recorder.start())
